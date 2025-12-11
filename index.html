@@ -1,0 +1,874 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>全球数贸交易服务门户 | Global Digital Trade Service Portal</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- React & ReactDOM (Production versions) -->
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+    
+    <!-- Babel -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    
+    <!-- Tailwind Config for Custom Colors -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'trade-blue': '#faf2dd', // Main Background (Cream/Beige)
+                        'trade-light': '#e6b185', // Secondary Background (Light Brown/Peach)
+                        'accent-gold': '#d27536', // Copper/Amber
+                        'accent-gold-hover': '#b5622a', // Darker shade for hover
+                        'tech-cyan': '#fda4af',   // Rose 300 (Tech Accent)
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #fafaf9; /* stone-50 */
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #d6d3d1; /* stone-300 */
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #a8a29e; /* stone-400 */
+        }
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.9);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        .dashboard-card {
+            /* Clean white card for light theme contrast */
+            background: white;
+            border: 1px solid #e7e5e4; /* stone-200 */
+        }
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+        /* Fade in animation */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-fade-in {
+            animation: fadeIn 0.5s ease-out forwards;
+        }
+        /* New Ticker Scroll Animation */
+        @keyframes scroll-left {
+            0% { transform: translateX(0); }
+            100% { transform: translateX(-50%); }
+        }
+        .animate-scroll {
+            display: flex;
+            animation: scroll-left 40s linear infinite;
+        }
+        .animate-scroll:hover {
+            animation-play-state: paused;
+        }
+    </style>
+</head>
+<body class="bg-stone-50 font-sans text-stone-800">
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+        
+        // --- Inline Icon System (Replaces Lucide Library to fix ForwardRef errors) ---
+        const Icon = ({ children, size = 24, className = "", ...props }) => (
+            <svg 
+                xmlns="http://www.w3.org/2000/svg" 
+                width={size} 
+                height={size} 
+                viewBox="0 0 24 24" 
+                fill="none" 
+                stroke="currentColor" 
+                strokeWidth="2" 
+                strokeLinecap="round" 
+                strokeLinejoin="round" 
+                className={className} 
+                {...props}
+            >
+                {children}
+            </svg>
+        );
+
+        const Globe = (props) => <Icon {...props}><circle cx="12" cy="12" r="10"/><line x1="2" x2="22" y1="12" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></Icon>;
+        const Languages = (props) => <Icon {...props}><path d="m5 8 6 6"/><path d="m4 14 6-6 2-3"/><path d="M2 5h12"/><path d="M7 2h1"/><path d="m22 22-5-10-5 10"/><path d="M14 18h6"/></Icon>;
+        const Users = (props) => <Icon {...props}><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></Icon>;
+        const BarChart3 = (props) => <Icon {...props}><path d="M3 3v18h18"/><path d="M18 17V9"/><path d="M13 17V5"/><path d="M8 17v-3"/></Icon>;
+        const TrendingUp = (props) => <Icon {...props}><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></Icon>;
+        const Building2 = (props) => <Icon {...props}><path d="M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18Z"/><path d="M6 12H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2"/><path d="M18 9h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-2"/><path d="M10 6h4"/><path d="M10 10h4"/><path d="M10 14h4"/><path d="M10 18h4"/></Icon>;
+        const ArrowRight = (props) => <Icon {...props}><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></Icon>;
+        const Plane = (props) => <Icon {...props}><path d="M2 12h5"/><path d="M13 12h3"/><path d="M19.74 7.33 22 12l-2.26 4.67a2 2 0 0 1-3.48 0l-2.26-4.67a2 2 0 0 1 3.48 0ZM7 12l3.25 5.5"/><path d="m7 12 3.25-5.5"/></Icon>;
+        const Coins = (props) => <Icon {...props}><circle cx="8" cy="8" r="6"/><path d="M18.09 10.37A6 6 0 1 1 10.34 18"/><path d="M7 6h1v4"/><path d="m16.71 13.88.7.71-2.82 2.82"/></Icon>;
+        const Search = (props) => <Icon {...props}><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></Icon>;
+        const ShieldCheck = (props) => <Icon {...props}><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10"/><path d="m9 12 2 2 4-4"/></Icon>;
+        const PlayCircle = (props) => <Icon {...props}><circle cx="12" cy="12" r="10"/><polygon points="10 8 16 12 10 16 10 8"/></Icon>;
+        const CheckCircle = (props) => <Icon {...props}><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></Icon>;
+        const LayoutDashboard = (props) => <Icon {...props}><rect width="7" height="9" x="3" y="3" rx="1"/><rect width="7" height="5" x="14" y="3" rx="1"/><rect width="7" height="9" x="14" y="12" rx="1"/><rect width="7" height="5" x="3" y="16" rx="1"/></Icon>;
+        const FileText = (props) => <Icon {...props}><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/><line x1="16" x2="8" y1="13" y2="13"/><line x1="16" x2="8" y1="17" y2="17"/><line x1="10" x2="8" y1="9" y2="9"/></Icon>;
+        const MessageSquare = (props) => <Icon {...props}><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></Icon>;
+        const Truck = (props) => <Icon {...props}><path d="M5 18H3c-.6 0-1-.4-1-1V7c0-.6.4-1 1-1h10c.6 0 1 .4 1 1v11"/><path d="M14 9h4l4 4v4c0 .6-.4 1-1 1h-2"/><circle cx="7" cy="18" r="2"/><circle cx="17" cy="18" r="2"/></Icon>;
+        const CreditCard = (props) => <Icon {...props}><rect width="20" height="14" x="2" y="5" rx="2"/><line x1="2" x2="22" y1="10" y2="10"/></Icon>;
+        const Anchor = (props) => <Icon {...props}><circle cx="12" cy="5" r="3"/><line x1="12" x2="12" y1="22" y2="8"/><path d="M5 12H2a10 10 0 0 0 20 0h-3"/></Icon>;
+        const AlertCircle = (props) => <Icon {...props}><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></Icon>;
+        // Additional icons for new views
+        const Calculator = (props) => <Icon {...props}><rect width="16" height="20" x="4" y="2" rx="2"/><line x1="8" x2="16" y1="6" y2="6"/><line x1="16" x2="16" y1="14" y2="18"/><path d="M16 10h.01"/><path d="M12 10h.01"/><path d="M8 10h.01"/><path d="M12 14h.01"/><path d="M8 14h.01"/><path d="M12 18h.01"/><path d="M8 18h.01"/></Icon>;
+        const FileCheck = (props) => <Icon {...props}><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/><path d="m9 15 2 2 4-4"/></Icon>;
+        const Star = (props) => <Icon {...props}><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></Icon>;
+        const Briefcase = (props) => <Icon {...props}><rect width="20" height="14" x="2" y="7" rx="2" ry="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></Icon>;
+        const Zap = (props) => <Icon {...props}><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></Icon>;
+
+        // Fallback component
+        const SafeIcon = ({ icon: IconComponent, ...props }) => {
+            if (!IconComponent) return null;
+            return <IconComponent {...props} />;
+        };
+
+        // --- Mock Data ---
+        const MOCK_STATS = [
+            { label: "累计撮合交易额 (CNY)", value: "¥ 842,100,300,000", change: "+12.5%" },
+            { label: "RCEP区域交易占比", value: "45.2%", change: "+5.1%" },
+            { label: "认证企业总数", value: "12,450", change: "+120/日" },
+            { label: "DCEP结算规模", value: "¥ 56,000,000", change: "试点中" },
+        ];
+
+        const MOCK_DEMANDS = [
+            { id: 1, type: 'buy', title: "500吨聚乙烯采购需求", country: "沙特阿拉伯", badge: "国家馆白名单", urgent: true, date: "10分钟前", tags: ["化工", "DCEP"] },
+            { id: 2, type: 'sell', title: "高精度数控机床产能释放", country: "中国", badge: "高新技术认证", urgent: false, date: "2小时前", tags: ["制造", "VR看厂"] },
+            { id: 3, type: 'buy', title: "医疗防护物资应急采购", country: "德国", badge: "使馆推荐", urgent: true, date: "5小时前", tags: ["医疗", "空运"] },
+            { id: 4, type: 'sell', title: "东盟特色水果（榴莲/山竹）", country: "泰国", badge: "原产地认证", urgent: false, date: "1天前", tags: ["农产品", "冷链"] },
+        ];
+
+        const PAVILIONS = [
+            { country: "沙特阿拉伯", image: "https://flagcdn.com/w640/sa.png", focus: "能源化工 / 基础设施", status: "Open" },
+            { country: "新加坡", image: "https://flagcdn.com/w640/sg.png", focus: "金融服务 / 转口贸易", status: "Open" },
+            { country: "德国", image: "https://flagcdn.com/w640/de.png", focus: "高端制造 / 汽车配件", status: "Open" },
+            { country: "泰国", image: "https://flagcdn.com/w640/th.png", focus: "农产品 / 橡胶", status: "Open" },
+        ];
+
+        const SERVICES = [
+            { id: 1, title: "智能关税与合规助手", desc: "输入HS编码自动计算关税，提供RCEP/FTA政策解读。", icon: Calculator, color: "bg-sky-100 text-sky-600" },
+            { id: 2, title: "跨境物流方案生成", desc: "AI整合民航、铁海联运数据，秒级生成经济/极速方案。", icon: Plane, color: "bg-emerald-100 text-emerald-600" },
+            { id: 3, title: "AI信用风险评估", desc: "基于多维数据生成交易对手风险报告，规避贸易陷阱。", icon: ShieldCheck, color: "bg-rose-100 text-rose-600" },
+            { id: 4, title: "供应链金融直通车", desc: "基于订单/运单的区块链融资，LPR利率优惠。", icon: Coins, color: "bg-amber-100 text-amber-600" },
+        ];
+
+        const PROVIDERS = [
+            { id: 1, name: "中外运物流服务有限公司", type: "物流运输", rating: 4.9, tags: ["全球网点", "AEO高级认证"], reviews: 1205 },
+            { id: 2, name: "金杜律师事务所国际部", type: "法律合规", rating: 4.8, tags: ["跨境争议解决", "多语种"], reviews: 450 },
+            { id: 3, name: "中国银行跨境金融中心", type: "金融结算", rating: 5.0, tags: ["DCEP试点", "T+0结算"], reviews: 3200 },
+            { id: 4, name: "SGS通标标准技术服务", type: "检验检测", rating: 4.9, tags: ["国际互认", "上门检测"], reviews: 890 },
+        ];
+
+        // --- Components ---
+
+        const Header = ({ currentView, setView }) => {
+            return (
+                <header className="sticky top-0 z-50 bg-trade-blue shadow-lg border-b border-stone-200">
+                    <div className="container mx-auto px-4 h-16 flex items-center justify-between">
+                        <div className="flex items-center space-x-3 cursor-pointer" onClick={() => setView('home')}>
+                            <div className="w-8 h-8 bg-accent-gold rounded flex items-center justify-center shadow-md shadow-orange-900/10">
+                                <SafeIcon icon={Globe} size={20} className="text-white" />
+                            </div>
+                            <div>
+                                <h1 className="font-bold text-lg leading-tight text-stone-800">全球数贸交易服务门户</h1>
+                                <p className="text-[10px] text-accent-gold uppercase tracking-wider font-bold">Global Digital Trade Service Portal</p>
+                            </div>
+                        </div>
+
+                        <nav className="hidden md:flex space-x-8 text-sm font-medium">
+                            <button onClick={() => setView('home')} className={`hover:text-accent-gold transition ${currentView === 'home' ? 'text-accent-gold font-bold' : 'text-stone-600'}`}>首页</button>
+                            <button onClick={() => setView('market')} className={`hover:text-accent-gold transition ${currentView === 'market' ? 'text-accent-gold font-bold' : 'text-stone-600'}`}>供需大厅</button>
+                            <button onClick={() => setView('pavilion')} className={`hover:text-accent-gold transition ${currentView === 'pavilion' ? 'text-accent-gold font-bold' : 'text-stone-600'}`}>国家馆专区</button>
+                            <button onClick={() => setView('services')} className={`hover:text-accent-gold transition ${currentView === 'services' ? 'text-accent-gold font-bold' : 'text-stone-600'}`}>贸易服务</button>
+                            <button onClick={() => setView('ecosystem')} className={`hover:text-accent-gold transition ${currentView === 'ecosystem' ? 'text-accent-gold font-bold' : 'text-stone-600'}`}>数商生态</button>
+                        </nav>
+
+                        <div className="flex items-center space-x-4">
+                            <button className="flex items-center space-x-1 text-xs text-stone-600 hover:text-accent-gold">
+                                <SafeIcon icon={Languages} size={14} />
+                                <span>中文/EN/العربية</span>
+                            </button>
+                            <button onClick={() => setView('dashboard')} className="bg-accent-gold hover:bg-accent-gold-hover text-white px-4 py-2 rounded text-sm font-bold transition flex items-center space-x-2 shadow-lg shadow-orange-900/20">
+                                <SafeIcon icon={Users} size={16} />
+                                <span>企业工作台</span>
+                            </button>
+                        </div>
+                    </div>
+                </header>
+            );
+        };
+
+        const DataTicker = () => {
+            const newsItems = [
+                "[交易] 沙特买家刚刚发布了500万美元聚乙烯需求",
+                "[物流] CA1024 航班已抵达法兰克福机场",
+                "[认证] 浙江XX制造有限公司通过国家馆白名单复审",
+                "[金融] DCEP跨境结算通道今日汇率优惠已开启",
+                "[政策] RCEP对菲律宾正式生效，零关税产品范围扩大",
+                "[行情] 国际原油价格波动，化工原料采购成本指数更新"
+            ];
+
+            return (
+                <div className="bg-trade-light border-b border-stone-300 text-stone-900 overflow-hidden py-2 font-medium relative">
+                    <div className="container mx-auto px-4 flex items-center text-xs">
+                        <div className="flex-shrink-0 z-20 bg-trade-light pr-4">
+                            <span className="text-stone-900 font-bold bg-white/30 px-2 rounded">● 实时快报：</span>
+                        </div>
+                        <div className="flex-1 overflow-hidden relative mask-image-gradient">
+                            <div className="flex space-x-12 whitespace-nowrap animate-scroll">
+                                {/* Duplicate items for seamless loop */}
+                                {newsItems.map((item, idx) => (
+                                    <span key={`orig-${idx}`} className="hover:text-white transition-colors cursor-pointer">{item}</span>
+                                ))}
+                                {newsItems.map((item, idx) => (
+                                    <span key={`dup-${idx}`} className="hover:text-white transition-colors cursor-pointer">{item}</span>
+                                ))}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        const StrategicDashboard = () => {
+            return (
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+                    {MOCK_STATS.map((stat, idx) => (
+                        <div key={idx} className="dashboard-card p-4 rounded-lg shadow-md hover:shadow-xl transition relative overflow-hidden group">
+                            <div className="absolute right-0 top-0 p-2 opacity-10 group-hover:opacity-20 transition">
+                                <SafeIcon icon={BarChart3} size={40} className="text-accent-gold" />
+                            </div>
+                            <p className="text-stone-500 text-xs mb-1 font-bold uppercase tracking-wide">{stat.label}</p>
+                            <h3 className="text-2xl font-bold text-stone-800 font-mono tracking-tight">{stat.value}</h3>
+                            <p className="text-red-600 text-xs mt-2 flex items-center font-bold">
+                                <SafeIcon icon={TrendingUp} size={12} className="mr-1"/> {stat.change}
+                            </p>
+                        </div>
+                    ))}
+                </div>
+            );
+        };
+
+        const FeatureGate = ({ setView }) => {
+            return (
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
+                    {/* National Pavilions */}
+                    <div onClick={() => setView('pavilion')} className="bg-white rounded-xl shadow-md p-6 hover:shadow-xl transition border-l-4 border-rose-400 cursor-pointer group">
+                        <div className="flex justify-between items-start mb-4">
+                            <div className="p-3 bg-rose-50 rounded-lg group-hover:bg-rose-100 transition">
+                                <SafeIcon icon={Building2} className="text-rose-600" size={32} />
+                            </div>
+                            <span className="bg-rose-100 text-rose-800 text-xs px-2 py-1 rounded-full font-bold">官方背书</span>
+                        </div>
+                        <h3 className="text-xl font-bold text-stone-800 mb-2">国家馆专区</h3>
+                        <p className="text-sm text-stone-500 mb-4">各国驻华使馆官方运营，汇聚白名单优质企业，政策直通车。</p>
+                        <div className="flex items-center text-rose-600 text-sm font-bold">
+                            进入展馆 <SafeIcon icon={ArrowRight} size={16} className="ml-1 group-hover:translate-x-1 transition" />
+                        </div>
+                    </div>
+
+                    {/* Logistics */}
+                    <div onClick={() => setView('services')} className="bg-white rounded-xl shadow-md p-6 hover:shadow-xl transition border-l-4 border-sky-600 cursor-pointer group">
+                        <div className="flex justify-between items-start mb-4">
+                            <div className="p-3 bg-sky-50 rounded-lg group-hover:bg-sky-100 transition">
+                                <SafeIcon icon={Plane} className="text-sky-600" size={32} />
+                            </div>
+                            <span className="bg-sky-100 text-sky-800 text-xs px-2 py-1 rounded-full font-bold">民航+铁海</span>
+                        </div>
+                        <h3 className="text-xl font-bold text-stone-800 mb-2">空中丝路物流</h3>
+                        <p className="text-sm text-stone-500 mb-4">智能生成经济/极速物流方案，民航货运直连，应急物流保障。</p>
+                        <div className="flex items-center text-sky-600 text-sm font-bold">
+                            查询运价 <SafeIcon icon={ArrowRight} size={16} className="ml-1 group-hover:translate-x-1 transition" />
+                        </div>
+                    </div>
+
+                    {/* DCEP */}
+                    <div onClick={() => setView('services')} className="bg-white rounded-xl shadow-md p-6 hover:shadow-xl transition border-l-4 border-amber-500 cursor-pointer group">
+                        <div className="flex justify-between items-start mb-4">
+                            <div className="p-3 bg-amber-50 rounded-lg group-hover:bg-amber-100 transition">
+                                <SafeIcon icon={Coins} className="text-amber-600" size={32} />
+                            </div>
+                            <span className="bg-amber-100 text-amber-800 text-xs px-2 py-1 rounded-full font-bold">T+0 结算</span>
+                        </div>
+                        <h3 className="text-xl font-bold text-stone-800 mb-2">DCEP跨境结算</h3>
+                        <p className="text-sm text-stone-500 mb-4">数字人民币试点专区，无汇率损失，智能合约自动履约。</p>
+                        <div className="flex items-center text-amber-600 text-sm font-bold">
+                            开通钱包 <SafeIcon icon={ArrowRight} size={16} className="ml-1 group-hover:translate-x-1 transition" />
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        const MarketList = () => {
+            return (
+                <div className="bg-white rounded-xl shadow-sm border border-stone-200 overflow-hidden">
+                    <div className="p-4 border-b border-stone-200 flex justify-between items-center bg-stone-50">
+                        <h3 className="font-bold text-stone-700 flex items-center">
+                            <SafeIcon icon={Search} size={18} className="mr-2" /> 最新供需动态
+                        </h3>
+                        <button className="text-sm text-accent-gold hover:underline font-medium">查看全部</button>
+                    </div>
+                    <div>
+                        {MOCK_DEMANDS.map((item) => (
+                            <div key={item.id} className="p-4 border-b border-stone-100 hover:bg-stone-50 transition flex flex-col md:flex-row md:items-center justify-between group cursor-pointer">
+                                <div className="flex-1">
+                                    <div className="flex items-center mb-1">
+                                        <span className={`text-xs font-bold px-2 py-0.5 rounded mr-2 ${item.type === 'buy' ? 'bg-orange-100 text-orange-800' : 'bg-green-100 text-green-800'}`}>
+                                            {item.type === 'buy' ? '采购' : '供应'}
+                                        </span>
+                                        <h4 className="font-medium text-stone-800 group-hover:text-accent-gold transition">{item.title}</h4>
+                                        {item.urgent && <span className="ml-2 text-[10px] bg-rose-500 text-white px-1.5 rounded animate-pulse">急</span>}
+                                    </div>
+                                    <div className="flex items-center text-xs text-stone-500 space-x-3">
+                                        <span className="flex items-center"><SafeIcon icon={Globe} size={12} className="mr-1"/> {item.country}</span>
+                                        <span className="flex items-center text-sky-600"><SafeIcon icon={ShieldCheck} size={12} className="mr-1"/> {item.badge}</span>
+                                        <span>{item.date}</span>
+                                    </div>
+                                </div>
+                                <div className="mt-2 md:mt-0 flex items-center space-x-2">
+                                    {item.tags.map((tag, idx) => (
+                                        <span key={idx} className="text-[10px] bg-stone-100 text-stone-600 px-2 py-1 rounded-full">{tag}</span>
+                                    ))}
+                                    <button className="bg-trade-blue text-stone-800 border border-stone-300 px-4 py-1.5 rounded text-sm hover:bg-accent-gold hover:text-white hover:border-accent-gold transition font-medium">
+                                        洽谈
+                                    </button>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            );
+        };
+
+        const PavilionView = () => {
+            return (
+                <div className="space-y-6 animate-fade-in">
+                    <div className="text-center py-8">
+                        <h2 className="text-3xl font-bold text-stone-800">国家馆专区</h2>
+                        <p className="text-stone-500 mt-2">各国驻华使馆官方背书 · 3D/VR 沉浸式展示 · 政策直通车</p>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                        {PAVILIONS.map((p, idx) => (
+                            <div key={idx} className="bg-white rounded-xl shadow-lg overflow-hidden border border-stone-200 hover:shadow-2xl transition transform hover:-translate-y-1 cursor-pointer group">
+                                <div className="h-32 relative bg-stone-200">
+                                    <img src={p.image} alt={p.country} className="w-full h-full object-cover opacity-90 group-hover:opacity-100 transition duration-500" />
+                                    <div className="absolute inset-0 bg-black/10 group-hover:bg-transparent transition"></div>
+                                    <div className="absolute bottom-2 right-2 bg-white/90 backdrop-blur text-stone-800 text-[10px] px-2 py-1 rounded flex items-center shadow-sm">
+                                        <SafeIcon icon={PlayCircle} size={10} className="mr-1 text-accent-gold"/> 3D VR
+                                    </div>
+                                </div>
+                                <div className="p-5">
+                                    <h3 className="text-xl font-bold mb-1 text-stone-800">{p.country}</h3>
+                                    <p className="text-xs text-stone-500 mb-3">优势产业: {p.focus}</p>
+                                    <div className="flex justify-between items-center mt-4">
+                                        <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full flex items-center font-bold">
+                                            <SafeIcon icon={CheckCircle} size={10} className="mr-1"/> 使馆认证
+                                        </span>
+                                        <button className="text-sm font-bold text-stone-600 hover:text-accent-gold transition">进入展馆 &rarr;</button>
+                                    </div>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            );
+        };
+
+        const ServiceView = () => {
+            return (
+                <div className="space-y-8 animate-fade-in">
+                    <div className="text-center py-8">
+                        <h2 className="text-3xl font-bold text-stone-800">贸易服务大厅</h2>
+                        <p className="text-stone-500 mt-2">跨境贸易全流程公益性智能工具，赋能企业出海</p>
+                    </div>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        {SERVICES.map((service) => (
+                            <div key={service.id} className="bg-white p-6 rounded-xl shadow-md hover:shadow-xl transition border border-stone-200 flex items-start group">
+                                <div className={`p-4 rounded-lg mr-4 group-hover:scale-110 transition ${service.color}`}>
+                                    <SafeIcon icon={service.icon} size={32} />
+                                </div>
+                                <div>
+                                    <h3 className="text-lg font-bold text-stone-800 mb-2">{service.title}</h3>
+                                    <p className="text-sm text-stone-500 mb-4">{service.desc}</p>
+                                    <button className="text-sm font-bold text-accent-gold hover:underline flex items-center">
+                                        立即使用 <SafeIcon icon={ArrowRight} size={14} className="ml-1" />
+                                    </button>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+
+                    <div className="bg-stone-100 rounded-xl p-8 border border-stone-200 mt-8">
+                        <div className="flex justify-between items-center mb-6">
+                            <h3 className="text-xl font-bold text-stone-800 flex items-center">
+                                <SafeIcon icon={Zap} size={20} className="mr-2 text-accent-gold"/> 常用服务组合
+                            </h3>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <button className="bg-white p-4 rounded-lg shadow-sm hover:shadow-md transition text-left border border-stone-200 group">
+                                <div className="font-bold text-stone-800 group-hover:text-accent-gold">化工品出口中东套装</div>
+                                <div className="text-xs text-stone-500 mt-1">包含：关税计算 + 物流方案 + 信保申请</div>
+                            </button>
+                            <button className="bg-white p-4 rounded-lg shadow-sm hover:shadow-md transition text-left border border-stone-200 group">
+                                <div className="font-bold text-stone-800 group-hover:text-accent-gold">RCEP原产地证办理</div>
+                                <div className="text-xs text-stone-500 mt-1">包含：资质预审 + 使馆认证 + 证书邮寄</div>
+                            </button>
+                            <button className="bg-white p-4 rounded-lg shadow-sm hover:shadow-md transition text-left border border-stone-200 group">
+                                <div className="font-bold text-stone-800 group-hover:text-accent-gold">跨境电商极速发货</div>
+                                <div className="text-xs text-stone-500 mt-1">包含：海外仓库存查询 + 极速物流订舱</div>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        const EcosystemView = () => {
+            return (
+                <div className="space-y-8 animate-fade-in">
+                    <div className="text-center py-8">
+                        <h2 className="text-3xl font-bold text-stone-800">数商生态</h2>
+                        <p className="text-stone-500 mt-2">汇聚全球优质服务商，共建数字贸易信任生态</p>
+                    </div>
+
+                    <div className="flex flex-wrap gap-2 justify-center mb-8">
+                        {["全部", "物流运输", "法律合规", "金融结算", "检验检测", "语言翻译"].map((filter, idx) => (
+                            <button key={idx} className={`px-4 py-2 rounded-full text-sm font-bold transition ${idx === 0 ? 'bg-accent-gold text-white' : 'bg-white text-stone-600 hover:bg-stone-100 border border-stone-200'}`}>
+                                {filter}
+                            </button>
+                        ))}
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                        {PROVIDERS.map((provider) => (
+                            <div key={provider.id} className="bg-white rounded-xl shadow-md overflow-hidden border border-stone-200 hover:shadow-xl transition group">
+                                <div className="h-24 bg-stone-100 flex items-center justify-center border-b border-stone-100">
+                                    <SafeIcon icon={Briefcase} size={40} className="text-stone-300 group-hover:text-accent-gold transition" />
+                                </div>
+                                <div className="p-5">
+                                    <div className="flex justify-between items-start mb-2">
+                                        <span className="text-xs font-bold bg-stone-100 text-stone-600 px-2 py-1 rounded">{provider.type}</span>
+                                        <span className="flex items-center text-amber-500 text-xs font-bold">
+                                            <SafeIcon icon={Star} size={12} className="mr-1 fill-current" /> {provider.rating}
+                                        </span>
+                                    </div>
+                                    <h3 className="font-bold text-stone-800 mb-2 line-clamp-1">{provider.name}</h3>
+                                    <div className="flex flex-wrap gap-1 mb-4">
+                                        {provider.tags.map((tag, idx) => (
+                                            <span key={idx} className="text-[10px] text-stone-500 border border-stone-200 px-1 rounded">{tag}</span>
+                                        ))}
+                                    </div>
+                                    <div className="flex justify-between items-center text-xs text-stone-400 border-t border-stone-100 pt-3">
+                                        <span>服务单量: {provider.reviews}+</span>
+                                        <button className="text-accent-gold hover:underline font-bold">查看详情</button>
+                                    </div>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+
+                    <div className="bg-trade-blue rounded-xl p-8 text-center border border-accent-gold/20 mt-12">
+                        <h3 className="text-xl font-bold text-stone-800 mb-2">成为认证服务商</h3>
+                        <p className="text-stone-600 mb-6 max-w-2xl mx-auto">加入全球数贸生态，获取精准商机推送。平台提供信用背书，助力服务商拓展海外市场。</p>
+                        <button className="bg-accent-gold text-white px-8 py-3 rounded font-bold hover:bg-accent-gold-hover transition shadow-lg shadow-orange-900/20">
+                            立即申请入驻
+                        </button>
+                    </div>
+                </div>
+            );
+        };
+
+        const DashboardView = () => {
+            return (
+                <div className="flex h-[calc(100vh-100px)] bg-stone-50 rounded-xl overflow-hidden border border-stone-200">
+                    {/* Sidebar */}
+                    <div className="w-64 bg-trade-blue border-r border-stone-200 flex flex-col">
+                        <div className="p-6 border-b border-stone-200">
+                            <div className="flex items-center space-x-3 mb-4">
+                                <div className="w-10 h-10 rounded-full bg-stone-200 border border-stone-300"></div>
+                                <div>
+                                    <h4 className="text-stone-800 font-bold text-sm">浙江XX智造</h4>
+                                    <p className="text-xs text-green-600 font-medium">认证: 白名单企业</p>
+                                </div>
+                            </div>
+                            <div className="text-xs bg-white p-2 rounded border border-stone-200 text-stone-600">
+                                信用评分: <span className="text-accent-gold font-bold">AAA</span>
+                            </div>
+                        </div>
+                        <nav className="flex-1 p-4 space-y-2">
+                            <a href="#" className="flex items-center space-x-3 bg-accent-gold text-white px-4 py-3 rounded shadow-md">
+                                <SafeIcon icon={LayoutDashboard} size={18} /> <span>工作台概览</span>
+                            </a>
+                            <a href="#" className="flex items-center space-x-3 hover:bg-white hover:shadow-sm px-4 py-3 rounded transition text-stone-600">
+                                <SafeIcon icon={FileText} size={18} /> <span>我的订单</span> <span className="ml-auto bg-rose-500 text-white text-[10px] px-1.5 rounded-full">2</span>
+                            </a>
+                            <a href="#" className="flex items-center space-x-3 hover:bg-white hover:shadow-sm px-4 py-3 rounded transition text-stone-600">
+                                <SafeIcon icon={MessageSquare} size={18} /> <span>在线磋商</span>
+                            </a>
+                            <a href="#" className="flex items-center space-x-3 hover:bg-white hover:shadow-sm px-4 py-3 rounded transition text-stone-600">
+                                <SafeIcon icon={Truck} size={18} /> <span>物流协同</span>
+                            </a>
+                            <a href="#" className="flex items-center space-x-3 hover:bg-white hover:shadow-sm px-4 py-3 rounded transition text-stone-600">
+                                <SafeIcon icon={CreditCard} size={18} /> <span>金融服务</span>
+                            </a>
+                        </nav>
+                    </div>
+                    
+                    {/* Main Content */}
+                    <div className="flex-1 p-8 overflow-y-auto bg-white">
+                        <h2 className="text-2xl font-bold text-stone-800 mb-6">我的订单全周期跟踪</h2>
+                        
+                        {/* Order Progress Card */}
+                        <div className="bg-stone-50 p-6 rounded-xl shadow-sm mb-6 border border-stone-200">
+                            <div className="flex justify-between items-center mb-6">
+                                <div>
+                                    <h3 className="font-bold text-lg text-stone-800">PO-20231024-001 (出口沙特聚乙烯)</h3>
+                                    <p className="text-sm text-stone-500">买方: 沙特阿美化工 | 2023-10-24</p>
+                                </div>
+                                <span className="bg-sky-100 text-sky-700 px-3 py-1 rounded text-sm font-bold">物流运输中</span>
+                            </div>
+
+                            <div className="relative">
+                                <div className="absolute top-1/2 left-0 w-full h-1 bg-stone-200 -z-10 transform -translate-y-1/2"></div>
+                                <div className="flex justify-between text-sm">
+                                    <div className="flex flex-col items-center">
+                                        <div className="w-8 h-8 rounded-full bg-green-500 text-white flex items-center justify-center mb-2"><SafeIcon icon={CheckCircle} size={16}/></div>
+                                        <span className="text-stone-600 font-medium">合同签署</span>
+                                    </div>
+                                    <div className="flex flex-col items-center">
+                                        <div className="w-8 h-8 rounded-full bg-green-500 text-white flex items-center justify-center mb-2"><SafeIcon icon={Coins} size={16}/></div>
+                                        <span className="text-stone-600 font-medium">预付款到账</span>
+                                    </div>
+                                    <div className="flex flex-col items-center">
+                                        <div className="w-8 h-8 rounded-full bg-green-500 text-white flex items-center justify-center mb-2"><SafeIcon icon={Anchor} size={16}/></div>
+                                        <span className="text-stone-600 font-medium">报关放行</span>
+                                    </div>
+                                    <div className="flex flex-col items-center">
+                                        <div className="w-10 h-10 rounded-full bg-sky-600 text-white border-4 border-white shadow flex items-center justify-center mb-2 animate-bounce"><SafeIcon icon={Plane} size={20}/></div>
+                                        <span className="font-bold text-sky-600">国际运输</span>
+                                    </div>
+                                    <div className="flex flex-col items-center opacity-50">
+                                        <div className="w-8 h-8 rounded-full bg-stone-300 text-white flex items-center justify-center mb-2"><SafeIcon icon={FileText} size={16}/></div>
+                                        <span className="text-stone-400">尾款结算</span>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div className="mt-6 bg-white p-4 rounded text-sm text-stone-600 flex items-start border border-stone-200 shadow-sm">
+                                <SafeIcon icon={AlertCircle} size={16} className="text-sky-500 mr-2 mt-0.5" />
+                                <div>
+                                    <p>物流最新动态: 货物已装载于 CA1024 航班，预计 8 小时后抵达利雅得国际机场。</p>
+                                    <a href="#" className="text-sky-600 underline text-xs">查看电子提单 (Blockchain Verified)</a>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-6">
+                             <div className="bg-white p-6 rounded-xl shadow-sm border border-stone-200">
+                                <h3 className="font-bold mb-4 text-stone-800">智能推荐服务</h3>
+                                <div className="space-y-3">
+                                    <div className="flex items-center justify-between p-3 border border-stone-100 rounded hover:bg-stone-50">
+                                        <div className="flex items-center">
+                                            <div className="bg-orange-100 p-2 rounded mr-3 text-orange-600"><SafeIcon icon={ShieldCheck} size={16}/></div>
+                                            <div>
+                                                <p className="font-medium text-sm text-stone-700">中信保短期出口险</p>
+                                                <p className="text-xs text-stone-500">此订单建议投保，费率优惠30%</p>
+                                            </div>
+                                        </div>
+                                        <button className="text-xs bg-stone-800 text-white px-3 py-1 rounded hover:bg-accent-gold transition">一键办理</button>
+                                    </div>
+                                     <div className="flex items-center justify-between p-3 border border-stone-100 rounded hover:bg-stone-50">
+                                        <div className="flex items-center">
+                                            <div className="bg-green-100 p-2 rounded mr-3 text-green-600"><SafeIcon icon={Coins} size={16}/></div>
+                                            <div>
+                                                <p className="font-medium text-sm text-stone-700">DCEP 汇率锁定</p>
+                                                <p className="text-xs text-stone-500">锁定当前最优汇率，规避波动</p>
+                                            </div>
+                                        </div>
+                                        <button className="text-xs bg-stone-800 text-white px-3 py-1 rounded hover:bg-accent-gold transition">办理</button>
+                                    </div>
+                                </div>
+                             </div>
+                             <div className="bg-white p-6 rounded-xl shadow-sm border border-stone-200">
+                                <h3 className="font-bold mb-4 text-stone-800">区块链存证记录</h3>
+                                <ul className="text-xs space-y-3 text-stone-500 font-mono">
+                                    <li className="flex justify-between">
+                                        <span>2023-10-25 14:30:22</span>
+                                        <span className="text-green-600">合同Hash上链成功</span>
+                                    </li>
+                                    <li className="flex justify-between">
+                                        <span>2023-10-26 09:15:00</span>
+                                        <span className="text-green-600">预付款凭证核验通过</span>
+                                    </li>
+                                    <li className="flex justify-between">
+                                        <span>2023-10-28 11:00:45</span>
+                                        <span className="text-green-600">海关查验指令接收</span>
+                                    </li>
+                                </ul>
+                             </div>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        const HomeView = ({ setView }) => {
+            return (
+                <main className="container mx-auto px-4 py-8 space-y-12 animate-fade-in">
+                    {/* Hero Dashboard */}
+                    <section className="bg-trade-blue rounded-2xl p-8 relative overflow-hidden shadow-xl border border-stone-200">
+                         {/* Abstract Background Map */}
+                        <div className="absolute inset-0 opacity-5 pointer-events-none" style={{backgroundImage: 'url("https://upload.wikimedia.org/wikipedia/commons/8/80/World_map_-_low_resolution.svg")', backgroundSize: 'cover', backgroundPosition: 'center', filter: 'invert(1)'}}></div>
+                        
+                        <div className="relative z-10">
+                            <div className="flex justify-between items-end mb-8">
+                                <div>
+                                    <h2 className="text-3xl font-bold mb-2 text-stone-800">全球数贸交易服务门户</h2>
+                                    <p className="text-accent-gold font-bold">连接全球 · 信用领航 · 数字赋能</p>
+                                </div>
+                                <div className="text-right hidden md:block">
+                                    <p className="text-xs text-stone-500 font-medium">平台运行时间</p>
+                                    <p className="font-mono text-xl text-stone-700">1289 天 14 小时</p>
+                                </div>
+                            </div>
+                            
+                            <StrategicDashboard />
+                            
+                            <div className="flex flex-wrap gap-4 mt-8">
+                                <button onClick={() => setView('market')} className="bg-accent-gold text-white px-6 py-3 rounded font-bold hover:bg-accent-gold-hover transition shadow-lg shadow-orange-900/20">
+                                    发布采购需求
+                                </button>
+                                <button onClick={() => setView('dashboard')} className="bg-white border border-accent-gold text-accent-gold px-6 py-3 rounded font-bold hover:bg-orange-50 transition">
+                                    申请企业入驻
+                                </button>
+                            </div>
+                        </div>
+                    </section>
+
+                    {/* Three Main Strategic Entrances */}
+                    <section>
+                        <div className="flex items-center justify-between mb-6">
+                            <h2 className="text-2xl font-bold text-stone-800 border-l-4 border-accent-gold pl-3">核心服务通道</h2>
+                        </div>
+                        <FeatureGate setView={setView} />
+                    </section>
+
+                    {/* Supply and Demand & Tools Split */}
+                    <section className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                        <div className="lg:col-span-2">
+                            <MarketList />
+                        </div>
+                        <div className="space-y-6">
+                            {/* Tools Panel */}
+                            <div className="bg-white rounded-xl shadow-sm border border-stone-200 p-5">
+                                <h3 className="font-bold text-stone-700 mb-4 flex items-center">
+                                    <SafeIcon icon={Anchor} size={18} className="mr-2 text-accent-gold" /> 贸易工具箱 (免费)
+                                </h3>
+                                <div className="grid grid-cols-2 gap-3">
+                                    <button className="p-3 bg-stone-50 rounded hover:bg-orange-50 text-left transition group border border-stone-100">
+                                        <div className="text-xs text-stone-500 group-hover:text-accent-gold">智能计算</div>
+                                        <div className="font-bold text-sm text-stone-700">关税与合规</div>
+                                    </button>
+                                    <button className="p-3 bg-stone-50 rounded hover:bg-orange-50 text-left transition group border border-stone-100">
+                                        <div className="text-xs text-stone-500 group-hover:text-accent-gold">风险评估</div>
+                                        <div className="font-bold text-sm text-stone-700">交易对手画像</div>
+                                    </button>
+                                    <button className="p-3 bg-stone-50 rounded hover:bg-orange-50 text-left transition group border border-stone-100">
+                                        <div className="text-xs text-stone-500 group-hover:text-accent-gold">物流方案</div>
+                                        <div className="font-bold text-sm text-stone-700">多式联运生成</div>
+                                    </button>
+                                    <button className="p-3 bg-stone-50 rounded hover:bg-orange-50 text-left transition group border border-stone-100">
+                                        <div className="text-xs text-stone-500 group-hover:text-accent-gold">金融服务</div>
+                                        <div className="font-bold text-sm text-stone-700">LPR融资申请</div>
+                                    </button>
+                                </div>
+                            </div>
+
+                            {/* Embassy News */}
+                            <div className="bg-white rounded-xl shadow-sm border border-stone-200 p-5">
+                                <h3 className="font-bold text-stone-700 mb-4 flex items-center">
+                                    <SafeIcon icon={Building2} size={18} className="mr-2 text-rose-600" /> 使馆权威发布
+                                </h3>
+                                <ul className="space-y-4">
+                                    <li className="flex items-start">
+                                        <span className="text-lg mr-2">🇸🇦</span>
+                                        <div>
+                                            <a href="#" className="text-sm font-medium hover:text-accent-gold block text-stone-800 transition">沙特2030愿景：发布新能源基础设施招标公告</a>
+                                            <span className="text-[10px] text-stone-400">2小时前 · 经商处认证</span>
+                                        </div>
+                                    </li>
+                                    <li className="flex items-start">
+                                        <span className="text-lg mr-2">🇻🇳</span>
+                                        <div>
+                                            <a href="#" className="text-sm font-medium hover:text-accent-gold block text-stone-800 transition">越南最新电子产品进口关税调整说明</a>
+                                            <span className="text-[10px] text-stone-400">1天前 · 商务参赞处</span>
+                                        </div>
+                                    </li>
+                                </ul>
+                            </div>
+                        </div>
+                    </section>
+                </main>
+            );
+        };
+
+        const Footer = () => {
+            return (
+                <footer className="bg-trade-blue text-stone-600 py-12 mt-12 border-t border-trade-light">
+                    <div className="container mx-auto px-4 grid grid-cols-1 md:grid-cols-4 gap-8 text-sm">
+                        <div>
+                            <div className="flex items-center space-x-2 text-stone-900 font-bold text-lg mb-4">
+                                <SafeIcon icon={Globe} size={20} className="text-accent-gold" /> <span>全球数贸交易服务门户</span>
+                            </div>
+                            <p className="text-xs leading-relaxed opacity-80 text-stone-600">
+                                本平台由民航投资集团牵头建设，服务于一带一路国家数字贸易战略。
+                                数据安全等级：三级等保 + 区块链全节点存证。
+                            </p>
+                        </div>
+                        <div>
+                            <h4 className="text-stone-900 font-bold mb-4">核心服务</h4>
+                            <ul className="space-y-2">
+                                <li><a href="#" className="hover:text-accent-gold transition">国家馆认证</a></li>
+                                <li><a href="#" className="hover:text-accent-gold transition">智能供需匹配</a></li>
+                                <li><a href="#" className="hover:text-accent-gold transition">DCEP结算</a></li>
+                                <li><a href="#" className="hover:text-accent-gold transition">跨境物流</a></li>
+                            </ul>
+                        </div>
+                        <div>
+                            <h4 className="text-stone-900 font-bold mb-4">合作伙伴</h4>
+                            <ul className="space-y-2">
+                                <li><a href="#" className="hover:text-accent-gold transition">中国出口信用保险公司</a></li>
+                                <li><a href="#" className="hover:text-accent-gold transition">中国银行 / 工商银行</a></li>
+                                <li><a href="#" className="hover:text-accent-gold transition">国航货运 / 中远海运</a></li>
+                                <li><a href="#" className="hover:text-accent-gold transition">各国驻华使馆经商处</a></li>
+                            </ul>
+                        </div>
+                        <div>
+                            <h4 className="text-stone-900 font-bold mb-4">联系我们</h4>
+                            <p className="mb-2">客服热线: 400-888-XXXX (中英双语)</p>
+                            <p className="mb-2">邮箱: service@globaltrade.gov.cn</p>
+                            <div className="mt-4 flex space-x-4">
+                                <div className="w-8 h-8 bg-stone-300 rounded flex items-center justify-center hover:bg-accent-gold hover:text-white transition cursor-pointer text-stone-600">微信</div>
+                                <div className="w-8 h-8 bg-stone-300 rounded flex items-center justify-center hover:bg-accent-gold hover:text-white transition cursor-pointer text-stone-600">LN</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div className="text-center mt-12 text-xs border-t border-stone-300 pt-6 text-stone-500">
+                        &copy; 2024 Global Digital Trade Service Portal. All Rights Reserved. 京ICP备XXXXXXXX号
+                    </div>
+                </footer>
+            );
+        };
+
+        const App = () => {
+            const [currentView, setView] = useState('home');
+
+            // Simulate loading state functionality if needed in future
+            useEffect(() => {
+                window.scrollTo(0, 0);
+            }, [currentView]);
+
+            return (
+                <div className="min-h-screen flex flex-col relative">
+                    {/* Background Layer with Earth Image */}
+                    <div className="fixed inset-0 z-0 pointer-events-none">
+                        <img 
+                            src="https://images.unsplash.com/photo-1451187580459-43490279c0fa?auto=format&fit=crop&q=80" 
+                            alt="Earth Background" 
+                            className="w-full h-full object-cover"
+                        />
+                        {/* Light overlay to maintain contrast with dark text and blend with cream theme */}
+                        <div className="absolute inset-0 bg-stone-50/90 backdrop-blur-[1px]"></div>
+                    </div>
+
+                    {/* Content Layer */}
+                    <div className="relative z-10 flex flex-col min-h-screen">
+                        <Header currentView={currentView} setView={setView} />
+                        <DataTicker />
+                        
+                        <div className="flex-grow">
+                            {currentView === 'home' && <HomeView setView={setView} />}
+                            {currentView === 'market' && (
+                                <main className="container mx-auto px-4 py-8 animate-fade-in">
+                                    <h2 className="text-2xl font-bold text-stone-800 mb-6">供需发布大厅</h2>
+                                    <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
+                                        <div className="lg:col-span-1 bg-white p-4 rounded-lg shadow h-fit border border-stone-200">
+                                            <h3 className="font-bold mb-4 text-stone-800">筛选条件</h3>
+                                            <div className="space-y-4 text-sm">
+                                                <div>
+                                                    <label className="block text-stone-500 mb-1">交易类型</label>
+                                                    <select className="w-full border border-stone-300 rounded p-2 text-stone-700 focus:border-accent-gold outline-none"><option>全部</option><option>采购需求</option><option>供应能力</option></select>
+                                                </div>
+                                                <div>
+                                                    <label className="block text-stone-500 mb-1">所属行业</label>
+                                                    <select className="w-full border border-stone-300 rounded p-2 text-stone-700 focus:border-accent-gold outline-none"><option>全部</option><option>能源化工</option><option>高新制造</option><option>农产品</option></select>
+                                                </div>
+                                                 <div>
+                                                    <label className="block text-stone-500 mb-1">认证等级</label>
+                                                    <div className="space-y-1">
+                                                        <label className="flex items-center text-stone-700"><input type="checkbox" className="mr-2 accent-accent-gold"/> 国家馆白名单</label>
+                                                        <label className="flex items-center text-stone-700"><input type="checkbox" className="mr-2 accent-accent-gold"/> 使馆推荐</label>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div className="lg:col-span-3">
+                                            <MarketList />
+                                        </div>
+                                    </div>
+                                </main>
+                            )}
+                            {currentView === 'pavilion' && (
+                                <main className="container mx-auto px-4 py-8">
+                                    <PavilionView />
+                                </main>
+                            )}
+                            {currentView === 'services' && (
+                                <main className="container mx-auto px-4 py-8">
+                                    <ServiceView />
+                                </main>
+                            )}
+                            {currentView === 'ecosystem' && (
+                                <main className="container mx-auto px-4 py-8">
+                                    <EcosystemView />
+                                </main>
+                            )}
+                            {currentView === 'dashboard' && (
+                                <main className="container mx-auto px-4 py-8">
+                                    <DashboardView />
+                                </main>
+                            )}
+                        </div>
+                        
+                        <Footer />
+                    </div>
+                </div>
+            );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
